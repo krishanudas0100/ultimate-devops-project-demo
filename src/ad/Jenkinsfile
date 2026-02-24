@@ -4,7 +4,7 @@ pipeline {
         jdk 'jdk21'
     }
     environment {
-        IMAGE_NAME = "krishanu12/ad-service:latest"
+        IMAGE_NAME = "krishanu12/ad-service"   // ✅ Remove :latest from here
         IMAGE_TAG = "${BUILD_NUMBER}"
     }
     stages {
@@ -19,7 +19,7 @@ pipeline {
             steps {
                 dir('src/ad') {
                     sh 'chmod +x gradlew'
-                    sh './gradlew clean build -x verifyGoogleJavaFormat'  // 👈 Fix here
+                    sh './gradlew clean build -x verifyGoogleJavaFormat'
                 }
             }
         }
@@ -33,7 +33,7 @@ pipeline {
                 dir('src/ad') {
                     script {
                         withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
-                            sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                            sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."  // ✅ krishanu12/ad-service:9
                         }
                     }
                 }
@@ -43,7 +43,9 @@ pipeline {
             steps {
                 script {
                     withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
-                        sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+                        sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"            // ✅ krishanu12/ad-service:9
+                        sh "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest"
+                        sh "docker push ${IMAGE_NAME}:latest"                  // ✅ also push latest
                     }
                 }
             }
