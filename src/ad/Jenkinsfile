@@ -61,7 +61,7 @@ pipeline {
                             # Commit and push back to GitHub
                             git config --global user.email "krishanudas0100@gmail.com"
                             git config --global user.name "Krishanu Das"
-                            git add kubernetes/ad-deployment.yaml
+                            git add kubernetes/ad/deploy.yaml
                             git commit -m "[CI]: Update ad-service image tag to ${IMAGE_TAG}"
                             git push origin HEAD:${GIT_BRANCH} -f
                         """
@@ -75,7 +75,7 @@ pipeline {
                     credentialsId: 'k8-cred',
                     namespace: 'webapps'
                 ) {
-                    sh 'kubectl apply -f kubernetes/ad-deployment.yaml'
+                    sh 'kubectl apply -f kubernetes/ad/deploy.yaml'
                 }
             }
         }
