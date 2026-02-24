@@ -4,7 +4,7 @@ pipeline {
         jdk 'jdk21'
     }
     environment {
-        IMAGE_NAME = "krishanu12/ad-service"
+        IMAGE_NAME = "krishanu12/ad-service:latest"
         IMAGE_TAG = "${BUILD_NUMBER}"
     }
     stages {
