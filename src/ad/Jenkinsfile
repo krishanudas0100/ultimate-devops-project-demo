@@ -63,7 +63,7 @@ pipeline {
                             git config --global user.name "Krishanu Das"
                             git add kubernetes/ad/deploy.yaml
                             git commit -m "[CI]: Update ad-service image tag to ${IMAGE_TAG}"
-                            git push origin HEAD:${GIT_BRANCH} -f
+                            git push origin HEAD:main -f
                         """
                     }
                 }
