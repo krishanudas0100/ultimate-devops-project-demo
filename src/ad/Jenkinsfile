@@ -53,7 +53,9 @@ pipeline {
         stage('Update Kubernetes Manifest') {
             steps {
                 script {
-                    withCredentials([gitUsernamePassword(credentialsId: 'git-cred', gitToolName: 'Default')]) {
+                    withCredentials([gitUsernamePassword(credentialsId: 'git-cred',
+                                                         usernameVariable: 'GIT_USERNAME',
+                                                        passwordVariable: 'GIT_PASSWORD')]) {
                         sh """
                             # Update the image tag in the deployment manifest
                             sed -i "s|image: .*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" kubernetes/ad/deploy.yaml
@@ -61,6 +63,7 @@ pipeline {
                             # Commit and push back to GitHub
                             git config --global user.email "krishanudas0100@gmail.com"
                             git config --global user.name "Krishanu Das"
+                            git remote set-url origin https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/krishanudas0100/ultimate-devops-project-demo.git
                             git add kubernetes/ad/deploy.yaml
                             git commit -m "[CI]: Update ad-service image tag to ${IMAGE_TAG}"
                             git push origin HEAD:main -f
