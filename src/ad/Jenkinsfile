@@ -62,7 +62,7 @@ pipeline {
 
                             # Commit and push back to GitHub
                             git config --global user.email "krishanudas0100@gmail.com"
-                            git config --global user.name "Krishanu Das"
+                            git config --global user.name "krishanudas0100"
                             git remote set-url origin https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/krishanudas0100/ultimate-devops-project-demo.git
                             git add kubernetes/ad/deploy.yaml
                             git commit -m "[CI]: Update ad-service image tag to ${IMAGE_TAG}"
