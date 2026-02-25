@@ -31,7 +31,13 @@ pipeline {
 
         stage('Trivy File Scan') {
             steps {
-                sh 'trivy fs --exit-code 0 --severity HIGH,CRITICAL --format table .'
+                sh 'trivy fs --exit-code 0 --severity HIGH,CRITICAL --format table -o trivy-report.txt .'
+                }
+                post {
+                    always {
+                        archiveArtifacts artifacts: 'trivy-report.txt',
+                             allowEmptyArchive: true
+                }
             }
         }
 
