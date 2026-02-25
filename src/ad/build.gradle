@@ -135,6 +135,21 @@ task ad(type: CreateStartScripts) {
     outputDir = new File(project.buildDir, 'tmp')
     classpath = startScripts.classpath
 }
+plugins {
+    id 'com.google.protobuf' version '0.9.4'
+    id 'java'
+    id 'org.sonarqube' version '4.4.1.3373'   // ✅ ADD THIS
+}
+
+// ✅ ADD THIS BLOCK at the bottom of the file
+sonarqube {
+    properties {
+        property 'sonar.projectKey',      'ad-service'
+        property 'sonar.projectName',     'ad-service'
+        property 'sonar.java.binaries',   'build/classes'
+        property 'sonar.sources',         'src/main/java'
+    }
+}
 
 applicationDistribution.into('bin') {
     from(ad)
