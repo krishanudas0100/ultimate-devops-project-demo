@@ -29,7 +29,7 @@ pipeline {
             }
         }
 
-        stage('Trivy File Scan') {
+        stage('Trivy File Scans') {
             steps {
                 sh 'trivy fs --exit-code 0 --severity HIGH,CRITICAL --format table -o trivy-report.txt .'
                 }
