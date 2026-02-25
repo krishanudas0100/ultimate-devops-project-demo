@@ -27,24 +27,34 @@ pipeline {
                 sh '''
                     FILE="src/ad/build.gradle"
                     echo "=== Checking for duplicate plugins {} blocks ==="
-                    grep -n "^plugins {" $FILE
+                    grep -n "^plugins {" "$FILE"
 
-                    COUNT=$(grep -c "^plugins {" $FILE || true)
+                    COUNT=$(grep -c "^plugins {" "$FILE" || true)
                     echo "Total plugins { blocks found: $COUNT"
 
                     if [ "$COUNT" -gt "1" ]; then
                         echo "=== Removing duplicate plugins block ==="
-                        # Get line number of second plugins { block
-                        SECOND=$(grep -n "^plugins {" $FILE | awk -F: "NR==2{print \$1}")
-                        # Get closing } line after second block
-                        END=$(awk "NR>=$SECOND && /^}/{print NR; exit}" $FILE)
-                        echo "Deleting lines $SECOND to $END"
-                        sed -i "${SECOND},${END}d" $FILE
+
+                        # Get ONLY the line number of the second plugins { block
+                        SECOND=$(grep -n "^plugins {" "$FILE" | sed -n "2p" | cut -d: -f1)
+                        echo "Second plugins block starts at line: $SECOND"
+
+                        # Find closing } of that block
+                        END=$(tail -n +"$SECOND" "$FILE" | grep -n "^}" | head -1 | cut -d: -f1)
+                        END=$((SECOND + END - 1))
+                        echo "Second plugins block ends at line: $END"
+
+                        # Delete the duplicate block
+                        sed -i "${SECOND},${END}d" "$FILE"
+
                         echo "=== Done. Remaining plugins blocks: ==="
-                        grep -n "^plugins {" $FILE
+                        grep -n "^plugins {" "$FILE"
                     else
                         echo "=== No duplicate found. build.gradle is clean ==="
                     fi
+
+                    echo "=== Final top 20 lines of build.gradle ==="
+                    head -20 "$FILE"
                 '''
             }
         }
@@ -66,7 +76,7 @@ pipeline {
             }
         }
 
-        // STAGE 5: SonarQube Analysis (using sonar-scanner CLI - no build.gradle needed)
+        // STAGE 5: SonarQube Analysis (sonar-scanner CLI - no build.gradle changes needed)
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonarqube') {
