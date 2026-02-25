@@ -140,4 +140,11 @@ plugins {
     id 'java'
     id 'org.sonarqube' version '4.4.1.3373'
 }
-
+sonarqube {
+    properties {
+        property 'sonar.projectKey',    'ad-service'
+        property 'sonar.projectName',   'ad-service'
+        property 'sonar.java.binaries', 'build/classes'
+        property 'sonar.sources',       'src/main/java'
+    }
+}
