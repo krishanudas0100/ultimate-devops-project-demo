@@ -138,7 +138,6 @@ task ad(type: CreateStartScripts) {
 plugins {
     id 'com.google.protobuf' version '0.9.4'
     id 'java'
-    id 'org.sonarqube' version '4.4.1.3373'
 }
 sonarqube {
     properties {
