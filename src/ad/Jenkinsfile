@@ -12,7 +12,6 @@ pipeline {
 
     stages {
 
-        // STAGE 1: Git Checkout
         stage('Git Checkout') {
             steps {
                 git branch: 'main',
@@ -21,45 +20,6 @@ pipeline {
             }
         }
 
-        // STAGE 2: Auto-Fix build.gradle (removes duplicate plugins block)
-        stage('Fix build.gradle') {
-            steps {
-                sh '''
-                    FILE="src/ad/build.gradle"
-                    echo "=== Checking for duplicate plugins {} blocks ==="
-                    grep -n "^plugins {" "$FILE"
-
-                    COUNT=$(grep -c "^plugins {" "$FILE" || true)
-                    echo "Total plugins { blocks found: $COUNT"
-
-                    if [ "$COUNT" -gt "1" ]; then
-                        echo "=== Removing duplicate plugins block ==="
-
-                        # Get ONLY the line number of the second plugins { block
-                        SECOND=$(grep -n "^plugins {" "$FILE" | sed -n "2p" | cut -d: -f1)
-                        echo "Second plugins block starts at line: $SECOND"
-
-                        # Find closing } of that block
-                        END=$(tail -n +"$SECOND" "$FILE" | grep -n "^}" | head -1 | cut -d: -f1)
-                        END=$((SECOND + END - 1))
-                        echo "Second plugins block ends at line: $END"
-
-                        # Delete the duplicate block
-                        sed -i "${SECOND},${END}d" "$FILE"
-
-                        echo "=== Done. Remaining plugins blocks: ==="
-                        grep -n "^plugins {" "$FILE"
-                    else
-                        echo "=== No duplicate found. build.gradle is clean ==="
-                    fi
-
-                    echo "=== Final top 20 lines of build.gradle ==="
-                    head -20 "$FILE"
-                '''
-            }
-        }
-
-        // STAGE 3: Build Ad Service
         stage('Build Ad Service') {
             steps {
                 dir('src/ad') {
@@ -69,14 +29,12 @@ pipeline {
             }
         }
 
-        // STAGE 4: Trivy File Scan
         stage('Trivy File Scan') {
             steps {
                 sh 'trivy fs --exit-code 0 --severity HIGH,CRITICAL --format table .'
             }
         }
 
-        // STAGE 5: SonarQube Analysis (sonar-scanner CLI - no build.gradle changes needed)
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonarqube') {
@@ -94,7 +52,6 @@ pipeline {
             }
         }
 
-        // STAGE 6: Quality Gate
         stage('Quality Gate') {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
@@ -103,7 +60,6 @@ pipeline {
             }
         }
 
-        // STAGE 7: Build Docker Image
         stage('Build Docker Image') {
             steps {
                 dir('src/ad') {
@@ -116,7 +72,6 @@ pipeline {
             }
         }
 
-        // STAGE 8: Push Docker Image
         stage('Push Docker Image') {
             steps {
                 script {
@@ -129,7 +84,6 @@ pipeline {
             }
         }
 
-        // STAGE 9: Update Kubernetes Manifest
         stage('Update Kubernetes Manifest') {
             steps {
                 script {
@@ -161,3 +115,4 @@ pipeline {
             echo "❌ Pipeline failed. Check the logs above for details."
         }
     }
+}
