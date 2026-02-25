@@ -41,9 +41,9 @@ pipeline {
                 withSonarQubeEnv('sonarqube') {
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                         sh '''
-                            chmod +x gradlew
-                            ./gradlew sonarqube \
-                              -Dsonar.login=$SONAR_TOKEN
+                            chmod +x src/ad/gradlew
+                              cd src/ad
+                               ./gradlew sonarqube -Dsonar.login=$SONAR_TOKEN
                         '''
                     }
                 }
