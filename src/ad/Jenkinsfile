@@ -65,7 +65,11 @@ pipeline {
                 }
             }
         }
-
+        stage('Debug build.gradle') {
+            steps {
+                sh 'cat -n src/ad/build.gradle'
+            }
+        }
         // ─────────────────────────────────────────────
         // STAGE 5: Quality Gate
         // ─────────────────────────────────────────────
