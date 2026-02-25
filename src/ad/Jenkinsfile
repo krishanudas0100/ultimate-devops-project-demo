@@ -1,13 +1,17 @@
 pipeline {
     agent any
+
     tools {
         jdk 'jdk21'
     }
+
     environment {
-        IMAGE_NAME = "krishanu123456/ad-service"   // ✅ Remove :latest from here
+        IMAGE_NAME = "krishanu123456/ad-service"
         IMAGE_TAG = "${BUILD_NUMBER}"
     }
+
     stages {
+
         stage('Git Checkout') {
             steps {
                 git branch: 'main',
@@ -15,6 +19,7 @@ pipeline {
                     url: 'https://github.com/krishanudas0100/ultimate-devops-project-demo.git'
             }
         }
+
         stage('Build Ad Service') {
             steps {
                 dir('src/ad') {
@@ -23,11 +28,13 @@ pipeline {
                 }
             }
         }
+
         stage('Trivy File Scan') {
             steps {
                 sh 'trivy fs .'
             }
         }
+
         stage('SonarQube Analysis') {
             steps {
                 dir('src/ad') {
@@ -35,12 +42,13 @@ pipeline {
                         withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                             sh '''
                                 chmod +x gradlew
-                                    ./gradlew clean build sonarqube \
-                                      -Dsonar.login=$SONAR_TOKEN
-                                    '''
-                                }
-                            }
+                                ./gradlew clean build sonarqube \
+                                  -Dsonar.login=$SONAR_TOKEN
+                            '''
+                        }
                     }
+                }
+            }
         }
 
         stage('Quality Gate') {
@@ -50,52 +58,55 @@ pipeline {
                 }
             }
         }
+
         stage('Build Docker Image') {
             steps {
                 dir('src/ad') {
                     script {
                         withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
-                            sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."  // ✅ krishanu12/ad-service:9
+                            sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
                         }
                     }
                 }
             }
         }
+
         stage('Push Docker Image') {
             steps {
                 script {
                     withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
-                        sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"            // ✅ krishanu12/ad-service:9
+                        sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
                         sh "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest"
-                        sh "docker push ${IMAGE_NAME}:latest"                  // ✅ also push latest
+                        sh "docker push ${IMAGE_NAME}:latest"
                     }
                 }
             }
         }
+
         stage('Update Kubernetes Manifest') {
             steps {
                 script {
-                    withCredentials([gitUsernamePassword(credentialsId: 'git-cred',
-                                                         usernameVariable: 'GIT_USERNAME',
-                                                        passwordVariable: 'GIT_PASSWORD')]) {
+                    withCredentials([gitUsernamePassword(
+                        credentialsId: 'git-cred',
+                        usernameVariable: 'GIT_USERNAME',
+                        passwordVariable: 'GIT_PASSWORD'
+                    )]) {
                         sh """
-                            # Update the image tag in the deployment manifest
                             sed -i "s|image: .*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" kubernetes/ad/deploy.yaml
 
-                            # Commit and push back to GitHub
                             git config --global user.email "krishanudas0100@gmail.com"
                             git config --global user.name "krishanudas0100"
+
                             git remote set-url origin https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/krishanudas0100/ultimate-devops-project-demo.git
+
                             git add kubernetes/ad/deploy.yaml
-                            git commit -m "[CI]: Update ad-service image tag to ${IMAGE_TAG}"
+                            git commit -m "[CI]: Update ad-service image tag to ${IMAGE_TAG}" || echo "No changes to commit"
                             git push origin HEAD:main -f
                         """
                     }
                 }
             }
         }
+
     }
 }
-}    
-
-    
