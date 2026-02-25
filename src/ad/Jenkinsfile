@@ -72,15 +72,4 @@ pipeline {
                 }
             }
         }
-        stage('Deploy To Kubernetes') {
-            steps {
-                withKubeConfig(
-                    credentialsId: 'k8-cred',
-                    namespace: 'webapps'
-                ) {
-                    sh 'kubectl apply -f kubernetes/ad/deploy.yaml'
-                }
-            }
-        }
     }
-}
