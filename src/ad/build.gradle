@@ -135,15 +135,8 @@ task ad(type: CreateStartScripts) {
     outputDir = new File(project.buildDir, 'tmp')
     classpath = startScripts.classpath
 }
-plugins {
-    id 'com.google.protobuf' version '0.9.4'
-    id 'java'
-}
-sonarqube {
-    properties {
-        property 'sonar.projectKey',    'ad-service'
-        property 'sonar.projectName',   'ad-service'
-        property 'sonar.java.binaries', 'build/classes'
-        property 'sonar.sources',       'src/main/java'
-    }
+
+applicationDistribution.into('bin') {
+    from(ad)
+    fileMode = 0755
 }
