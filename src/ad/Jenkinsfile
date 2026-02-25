@@ -20,7 +20,7 @@ pipeline {
             }
         }
 
-        stage('Build Ad Service') {
+        stage('Build Ad Services') {
             steps {
                 dir('src/ad') {
                     sh 'chmod +x gradlew'
