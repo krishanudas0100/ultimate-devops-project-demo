@@ -56,8 +56,8 @@ pipeline {
                                 chmod +x gradlew
                                 ./gradlew sonarqube \
                                     -Dsonar.login=$SONAR_TOKEN \
-                                    -Dsonar.projectKey=opentelemetry-demo-ad \
-                                    -Dsonar.projectName=opentelemetry-demo-ad \
+                                    -Dsonar.projectKey=ad-service \
+                                    -Dsonar.projectName=ad-service \
                                     -Dsonar.java.binaries=build/classes
                             '''
                         }
