@@ -7,11 +7,14 @@ pipeline {
 
     environment {
         IMAGE_NAME = "krishanu123456/ad-service"
-        IMAGE_TAG = "${BUILD_NUMBER}"
+        IMAGE_TAG  = "${BUILD_NUMBER}"
     }
 
     stages {
 
+        // ─────────────────────────────────────────────
+        // STAGE 1: Git Checkout
+        // ─────────────────────────────────────────────
         stage('Git Checkout') {
             steps {
                 git branch: 'main',
@@ -20,6 +23,9 @@ pipeline {
             }
         }
 
+        // ─────────────────────────────────────────────
+        // STAGE 2: Build Ad Service
+        // ─────────────────────────────────────────────
         stage('Build Ad Service') {
             steps {
                 dir('src/ad') {
@@ -29,27 +35,40 @@ pipeline {
             }
         }
 
+        // ─────────────────────────────────────────────
+        // STAGE 3: Trivy File Scan
+        // ─────────────────────────────────────────────
         stage('Trivy File Scan') {
             steps {
-                sh 'trivy fs .'
+                sh 'trivy fs --exit-code 0 --severity HIGH,CRITICAL --format table .'
             }
         }
 
-        // ✅ RUN SONAR FROM ROOT (IMPORTANT FIX)
+        // ─────────────────────────────────────────────
+        // STAGE 4: SonarQube Analysis
+        // ─────────────────────────────────────────────
         stage('SonarQube Analysis') {
             steps {
                 dir('src/ad') {
                     withSonarQubeEnv('sonarqube') {
                         withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                             sh '''
-                            chmod +x gradlew
-                                ./gradlew sonarqube -Dsonar.login=$SONAR_TOKEN
+                                chmod +x gradlew
+                                ./gradlew sonarqube \
+                                    -Dsonar.login=$SONAR_TOKEN \
+                                    -Dsonar.projectKey=opentelemetry-demo-ad \
+                                    -Dsonar.projectName=opentelemetry-demo-ad \
+                                    -Dsonar.java.binaries=build/classes
                             '''
                         }
                     }
                 }
             }
         }
+
+        // ─────────────────────────────────────────────
+        // STAGE 5: Quality Gate
+        // ─────────────────────────────────────────────
         stage('Quality Gate') {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
@@ -58,6 +77,9 @@ pipeline {
             }
         }
 
+        // ─────────────────────────────────────────────
+        // STAGE 6: Build Docker Image
+        // ─────────────────────────────────────────────
         stage('Build Docker Image') {
             steps {
                 dir('src/ad') {
@@ -70,18 +92,24 @@ pipeline {
             }
         }
 
+        // ─────────────────────────────────────────────
+        // STAGE 7: Push Docker Image
+        // ─────────────────────────────────────────────
         stage('Push Docker Image') {
             steps {
                 script {
                     withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
                         sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
-                        sh "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest"
+                        sh "docker tag  ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest"
                         sh "docker push ${IMAGE_NAME}:latest"
                     }
                 }
             }
         }
 
+        // ─────────────────────────────────────────────
+        // STAGE 8: Update Kubernetes Manifest
+        // ─────────────────────────────────────────────
         stage('Update Kubernetes Manifest') {
             steps {
                 script {
@@ -91,21 +119,32 @@ pipeline {
                         passwordVariable: 'GIT_PASSWORD'
                     )]) {
                         sh """
-                            sed -i "s|image: .*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" kubernetes/ad/deploy.yaml
-
-                            git config --global user.email "krishanudas0100@gmail.com"
-                            git config --global user.name "krishanudas0100"
-
-                            git remote set-url origin https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/krishanudas0100/ultimate-devops-project-demo.git
-
+                            sed -i 's|image: .*|image: ${IMAGE_NAME}:${IMAGE_TAG}|g' kubernetes/ad/deploy.yaml
+                            git config user.email "krishanudas0100@gmail.com"
+                            git config user.name "krishanudas0100"
+                            git remote set-url origin https://\${GIT_USERNAME}:\${GIT_PASSWORD}@github.com/krishanudas0100/ultimate-devops-project-demo.git
                             git add kubernetes/ad/deploy.yaml
                             git commit -m "[CI]: Update ad-service image tag to ${IMAGE_TAG}" || echo "No changes to commit"
-                            git push origin HEAD:main -f
+                            git push origin HEAD:main
                         """
                     }
                 }
             }
         }
+    }
 
+    // ─────────────────────────────────────────────
+    // POST ACTIONS
+    // ─────────────────────────────────────────────
+    post {
+        success {
+            echo "✅ Pipeline completed successfully! Image: ${IMAGE_NAME}:${IMAGE_TAG}"
+        }
+        failure {
+            echo "❌ Pipeline failed. Check the logs above for details."
+        }
+        always {
+            cleanWs()
+        }
     }
 }
