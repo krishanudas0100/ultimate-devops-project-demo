@@ -12,9 +12,7 @@ pipeline {
 
     stages {
 
-        // ─────────────────────────────────────────────
         // STAGE 1: Git Checkout
-        // ─────────────────────────────────────────────
         stage('Git Checkout') {
             steps {
                 git branch: 'main',
@@ -23,9 +21,35 @@ pipeline {
             }
         }
 
-        // ─────────────────────────────────────────────
-        // STAGE 2: Build Ad Service
-        // ─────────────────────────────────────────────
+        // STAGE 2: Auto-Fix build.gradle (removes duplicate plugins block)
+        stage('Fix build.gradle') {
+            steps {
+                sh '''
+                    FILE="src/ad/build.gradle"
+                    echo "=== Checking for duplicate plugins {} blocks ==="
+                    grep -n "^plugins {" $FILE
+
+                    COUNT=$(grep -c "^plugins {" $FILE || true)
+                    echo "Total plugins { blocks found: $COUNT"
+
+                    if [ "$COUNT" -gt "1" ]; then
+                        echo "=== Removing duplicate plugins block ==="
+                        # Get line number of second plugins { block
+                        SECOND=$(grep -n "^plugins {" $FILE | awk -F: "NR==2{print \$1}")
+                        # Get closing } line after second block
+                        END=$(awk "NR>=$SECOND && /^}/{print NR; exit}" $FILE)
+                        echo "Deleting lines $SECOND to $END"
+                        sed -i "${SECOND},${END}d" $FILE
+                        echo "=== Done. Remaining plugins blocks: ==="
+                        grep -n "^plugins {" $FILE
+                    else
+                        echo "=== No duplicate found. build.gradle is clean ==="
+                    fi
+                '''
+            }
+        }
+
+        // STAGE 3: Build Ad Service
         stage('Build Ad Service') {
             steps {
                 dir('src/ad') {
@@ -35,42 +59,32 @@ pipeline {
             }
         }
 
-        // ─────────────────────────────────────────────
-        // STAGE 3: Trivy File Scan
-        // ─────────────────────────────────────────────
+        // STAGE 4: Trivy File Scan
         stage('Trivy File Scan') {
             steps {
                 sh 'trivy fs --exit-code 0 --severity HIGH,CRITICAL --format table .'
             }
         }
 
-        // ─────────────────────────────────────────────
-        // STAGE 4: SonarQube Analysis
-        // ─────────────────────────────────────────────
-          stage('SonarQube Analysis') {
+        // STAGE 5: SonarQube Analysis (using sonar-scanner CLI - no build.gradle needed)
+        stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonarqube') {
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                         sh '''
                             sonar-scanner \
-                            -Dsonar.projectKey=ad-service \
-                            -Dsonar.projectName=ad-service \
-                            -Dsonar.sources=src/ad/src/main/java \
-                            -Dsonar.java.binaries=src/ad/build/classes \
-                            -Dsonar.login=$SONAR_TOKEN
+                                -Dsonar.projectKey=ad-service \
+                                -Dsonar.projectName=ad-service \
+                                -Dsonar.sources=src/ad/src/main/java \
+                                -Dsonar.java.binaries=src/ad/build/classes \
+                                -Dsonar.login=$SONAR_TOKEN
                         '''
                     }
                 }
             }
         }
-        stage('Debug build.gradle') {
-            steps {
-                sh 'cat -n src/ad/build.gradle'
-            }
-        }
-        // ─────────────────────────────────────────────
-        // STAGE 5: Quality Gate
-        // ─────────────────────────────────────────────
+
+        // STAGE 6: Quality Gate
         stage('Quality Gate') {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
@@ -79,9 +93,7 @@ pipeline {
             }
         }
 
-        // ─────────────────────────────────────────────
-        // STAGE 6: Build Docker Image
-        // ─────────────────────────────────────────────
+        // STAGE 7: Build Docker Image
         stage('Build Docker Image') {
             steps {
                 dir('src/ad') {
@@ -94,9 +106,7 @@ pipeline {
             }
         }
 
-        // ─────────────────────────────────────────────
-        // STAGE 7: Push Docker Image
-        // ─────────────────────────────────────────────
+        // STAGE 8: Push Docker Image
         stage('Push Docker Image') {
             steps {
                 script {
@@ -109,9 +119,7 @@ pipeline {
             }
         }
 
-        // ─────────────────────────────────────────────
-        // STAGE 8: Update Kubernetes Manifest
-        // ─────────────────────────────────────────────
+        // STAGE 9: Update Kubernetes Manifest
         stage('Update Kubernetes Manifest') {
             steps {
                 script {
@@ -135,9 +143,6 @@ pipeline {
         }
     }
 
-    // ─────────────────────────────────────────────
-    // POST ACTIONS
-    // ─────────────────────────────────────────────
     post {
         success {
             echo "✅ Pipeline completed successfully! Image: ${IMAGE_NAME}:${IMAGE_TAG}"
