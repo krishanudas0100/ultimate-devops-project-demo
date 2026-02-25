@@ -35,17 +35,16 @@ pipeline {
             }
         }
 
+        // ✅ RUN SONAR FROM ROOT (IMPORTANT FIX)
         stage('SonarQube Analysis') {
             steps {
-                dir('src/ad') {
-                    withSonarQubeEnv('sonarqube') {
-                        withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                            sh '''
-                                chmod +x gradlew
-                                ./gradlew clean build sonarqube \
-                                  -Dsonar.login=$SONAR_TOKEN
-                            '''
-                        }
+                withSonarQubeEnv('sonarqube') {
+                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                        sh '''
+                            chmod +x gradlew
+                            ./gradlew sonarqube \
+                              -Dsonar.login=$SONAR_TOKEN
+                        '''
                     }
                 }
             }
